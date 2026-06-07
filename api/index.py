@@ -287,17 +287,24 @@ async def latency_analytics(request: Request):
     regions = body.get("regions", [])
     threshold_ms = body.get("threshold_ms", 180)
 
-    results = []
+    # The portal expects a dictionary/object response, not a list inside {"regions": []}
+    results = {}
+    
     for region in regions:
-        records   = [r for r in TELEMETRY_DATA if r["region"] == region]
+        records = [r for r in TELEMETRY_DATA if r["region"] == region]
+        
+        # Guard against requested regions that might not exist in your dataset
+        if not records:
+            continue
+            
         latencies = [r["latency_ms"] for r in records]
         uptimes   = [r["uptime_pct"]  for r in records]
-        results.append({
-            "region":      region,
+        
+        results[region] = {
             "avg_latency": round(float(np.mean(latencies)), 2),
             "p95_latency": round(float(np.percentile(latencies, 95)), 2),
             "avg_uptime":  round(float(np.mean(uptimes)), 3),
             "breaches":    int(sum(1 for l in latencies if l > threshold_ms))
-        })
+        }
 
-    return {"regions": results}
+    return results
