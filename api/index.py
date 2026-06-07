@@ -281,22 +281,23 @@ TELEMETRY_DATA = json.loads("""
 ]
 """)
 
-@app.post("/api/latency")
+# You can keep a quick health check for GET if you want, or replace it entirely
+@app.get("/")
+def root():
+    return {"status": "ok"}
+
+# Change the path here from "/api/latency" to just "/"
+@app.post("/")
 async def latency_analytics(request: Request):
     body = await request.json()
     regions = body.get("regions", [])
     threshold_ms = body.get("threshold_ms", 180)
 
-    # The portal expects a dictionary/object response, not a list inside {"regions": []}
     results = {}
-    
     for region in regions:
-        records = [r for r in TELEMETRY_DATA if r["region"] == region]
-        
-        # Guard against requested regions that might not exist in your dataset
+        records   = [r for r in TELEMETRY_DATA if r["region"] == region]
         if not records:
             continue
-            
         latencies = [r["latency_ms"] for r in records]
         uptimes   = [r["uptime_pct"]  for r in records]
         
